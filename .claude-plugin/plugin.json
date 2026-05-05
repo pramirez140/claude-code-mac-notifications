@@ -1,0 +1,27 @@
+{
+  "name": "claude-code-mac-notifications",
+  "description": "Native macOS notifications when Claude Code finishes a turn — with a 3-4 word AI summary, click-to-focus the originating terminal window, and the Claude logo as the icon.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Pablo Ramirez",
+    "url": "https://github.com/pramirez140"
+  },
+  "homepage": "https://github.com/pramirez140/claude-code-mac-notifications",
+  "repository": "https://github.com/pramirez140/claude-code-mac-notifications",
+  "license": "MIT",
+  "keywords": ["macos", "notifications", "stop-hook", "terminal", "productivity"],
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/notify-stop.sh\"",
+            "async": true,
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
