@@ -45,7 +45,6 @@ fi
 # 3. Copy hooks and icon
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOOKS_DIR="$HOME/.claude/hooks"
-ASSETS_DIR="$HOME/.claude/hooks"
 
 mkdir -p "$HOOKS_DIR"
 
