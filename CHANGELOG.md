@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- README: new section *"Model, auth, and estimated usage"* documenting model choice (Haiku 4.5), auth inheritance from your interactive `claude` login (no API key stored anywhere), and per-call token + cost estimates measured from real invocations.
+
 ### Fixed
 
 - ShellCheck SC2034 — removed unused `ASSETS_DIR` from `install.sh` and unused `SESSION_ID` from `hooks/notify-stop.sh`. No behavior change.

@@ -26,6 +26,7 @@ You start a long Claude task and tab away. Two things can happen, and you want t
   - [Option 2 — Claude Code plugin](#option-2--claude-code-plugin)
 - [Verifying it works](#verifying-it-works)
 - [Customization](#customization)
+- [Model, auth, and estimated usage](#model-auth-and-estimated-usage)
 - [How it works](#how-it-works)
 - [Engineering notes — why so much code for a notification](#engineering-notes--why-so-much-code-for-a-notification)
 - [Roadmap](#roadmap)
@@ -149,6 +150,51 @@ Replace `assets/claude-icon.png` (or `~/.claude/hooks/claude-icon.png` for scrip
 ```
 
 …and toggle the entry off, or remove it from `~/.claude/settings.json`.
+
+## Model, auth, and estimated usage
+
+### Model selection
+
+The Stop hook calls **Claude Haiku 4.5** via `claude -p --model haiku --strict-mcp-config --no-session-persistence`. We picked Haiku because it's the fastest + cheapest model in the Claude family, and 3-to-4 word summaries don't need a smarter model. `--strict-mcp-config` skips MCP server loading (saves ~3s of startup), and `--no-session-persistence` prevents the one-shot summary calls from cluttering `~/.claude/projects/`.
+
+The Notification hook makes **zero** LLM calls — its body is a fixed string, so it's free and fires in ~40ms.
+
+### Resource inheritance
+
+The hook is a thin wrapper around the `claude` CLI. It does **not** ship credentials, set `ANTHROPIC_API_KEY`, or use the `--bare` flag. That means it inherits whatever auth your interactive `claude` session uses:
+
+- **Claude Pro / Max / Team** (OAuth via macOS Keychain) → calls draw from your subscription's quota. **$0 dollar cost.**
+- **Console / API key** (`ANTHROPIC_API_KEY` in env) → billed at standard Haiku rates.
+- **No auth** → `claude -p` fails silently and the hook falls back to a first-N-words summary; the notification still fires.
+
+No API key, OAuth token, or other credential is ever read, written, logged, or transmitted by this project. You can verify by `grep`-ing the repo:
+
+```bash
+grep -RIn -E 'sk-ant-|ANTHROPIC_API_KEY|anthropic\.com/v1' .
+```
+
+### Estimated token usage
+
+Measured from real haiku invocations on a typical workstation:
+
+| Field | Per call |
+|---|---|
+| Fresh input tokens | ~10 |
+| Cache write (1h) | ~7,500 |
+| Cache read | ~35,000 (after first call) |
+| Output tokens | ~300-1,500 (variable; the trimmer takes the first line) |
+
+At Haiku 4.5 list pricing (~$1 / $5 / $2 / $0.10 per MTok for input / output / 1h cache write / 1h cache read), each Stop event costs **about $0.015–0.020** for API users. The Notification hook is free.
+
+For a back-of-the-envelope:
+
+| Daily Claude turns | API cost / day | API cost / month |
+|---|---|---|
+| 25  | ~$0.40 | ~$12   |
+| 50  | ~$0.85 | ~$25   |
+| 100 | ~$1.70 | ~$50   |
+
+If you're on a subscription this is just quota usage and you can ignore the dollar figures. If you're on API-key billing and the cost matters, look at adding `--tools ''` to the `claude -p` invocation in `hooks/notify-stop.sh` — it drops the ~30K cached tool-definition tokens that the summary task doesn't need (we keep tools enabled by default to avoid edge-case CLI weirdness).
 
 ## How it works
 
