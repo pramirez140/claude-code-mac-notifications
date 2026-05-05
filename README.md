@@ -9,7 +9,8 @@ When you start a long Claude Code task and tab away, this fires a notification t
 ## Features
 
 - **Banner per turn** — fires on Claude Code's `Stop` event. Async, never blocks your prompt.
-- **AI-summarized body** — a `claude -p --model haiku` call produces a 3-4 word action phrase from the last assistant message. Falls back to first-N-words if the LLM call fails.
+- **Banner when Claude is waiting on you** — fires on the `Notification` event (permission prompts, `AskUserQuestion`, etc.) with a sound and a "Needs your input" body. No LLM call, instant.
+- **AI-summarized body for Stop** — a `claude -p --model haiku` call produces a 3-4 word action phrase from the last assistant message. Falls back to first-N-words if the LLM call fails.
 - **Click-to-focus the right window** — captures the Claude session's TTY, then matches it via AppleScript on click. Works for **Apple Terminal** and **iTerm2**; other terminals fall back to whole-app activation.
 - **Project-scoped title** — `Claude · <basename of cwd>` so you can tell sessions apart at a glance.
 - **Dedup** — a fixed notification group means newer alerts displace older ones, so the Notification Center stays clean.

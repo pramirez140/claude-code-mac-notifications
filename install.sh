@@ -50,9 +50,10 @@ ASSETS_DIR="$HOME/.claude/hooks"
 mkdir -p "$HOOKS_DIR"
 
 info "Copying scripts to $HOOKS_DIR/"
-cp "$SCRIPT_DIR/hooks/notify-stop.sh"   "$HOOKS_DIR/notify-stop.sh"
+cp "$SCRIPT_DIR/hooks/notify-stop.sh"    "$HOOKS_DIR/notify-stop.sh"
+cp "$SCRIPT_DIR/hooks/notify-input.sh"   "$HOOKS_DIR/notify-input.sh"
 cp "$SCRIPT_DIR/hooks/focus-terminal.sh" "$HOOKS_DIR/focus-terminal.sh"
-chmod +x "$HOOKS_DIR/notify-stop.sh" "$HOOKS_DIR/focus-terminal.sh"
+chmod +x "$HOOKS_DIR/notify-stop.sh" "$HOOKS_DIR/notify-input.sh" "$HOOKS_DIR/focus-terminal.sh"
 
 info "Copying icon to $HOOKS_DIR/claude-icon.png"
 cp "$SCRIPT_DIR/assets/claude-icon.png" "$HOOKS_DIR/claude-icon.png"
@@ -64,7 +65,7 @@ mkdir -p "$(dirname "$SETTINGS")"
 
 info "Patching $SETTINGS"
 
-NEW_HOOK=$(cat <<JSON
+STOP_HOOK=$(cat <<JSON
 {
   "type": "command",
   "command": "bash \"$HOOKS_DIR/notify-stop.sh\"",
@@ -74,19 +75,33 @@ NEW_HOOK=$(cat <<JSON
 JSON
 )
 
-# jq merge: append our hook if not already present, replace if it is.
+INPUT_HOOK=$(cat <<JSON
+{
+  "type": "command",
+  "command": "bash \"$HOOKS_DIR/notify-input.sh\"",
+  "async": true,
+  "timeout": 10
+}
+JSON
+)
+
+# jq merge: replace any prior entries pointing at our scripts; append fresh ones.
 TMP=$(mktemp)
-jq --argjson newhook "$NEW_HOOK" '
+jq --argjson stop "$STOP_HOOK" --argjson input "$INPUT_HOOK" '
   .hooks = (.hooks // {}) |
-  .hooks.Stop = (.hooks.Stop // []) |
-  # Find any existing block whose hooks contain a notify-stop.sh command.
+  # Stop hook
   .hooks.Stop = (
-    [ .hooks.Stop[]? |
-      select(
-        (.hooks // []) | any(.command? | tostring | contains("notify-stop.sh")) | not
-      )
+    [ (.hooks.Stop // [])[] |
+      select((.hooks // []) | any(.command? | tostring | contains("notify-stop.sh")) | not)
     ]
-    + [ { hooks: [ $newhook ] } ]
+    + [ { hooks: [ $stop ] } ]
+  ) |
+  # Notification hook
+  .hooks.Notification = (
+    [ (.hooks.Notification // [])[] |
+      select((.hooks // []) | any(.command? | tostring | contains("notify-input.sh")) | not)
+    ]
+    + [ { hooks: [ $input ] } ]
   )
 ' "$SETTINGS" > "$TMP"
 
@@ -102,17 +117,20 @@ cat <<DONE
 
 ${GREEN}Installed.${RESET}
 
-Restart Claude Code (or open '/hooks' once) so the new Stop hook is picked up.
+Restart Claude Code (or open '/hooks' once) so the new hooks are picked up.
 
-What you'll see on every Claude turn:
-  - macOS notification with a 3-4 word AI summary
-  - Click → jumps back to the exact terminal window/tab Claude was in
+What you'll see:
+  - On every Claude turn end → "Claude · <project>" with a 3-4 word AI summary
+  - On every input prompt    → "Claude · <project>" / "Needs your input" + sound
+  - Click either → jumps back to the exact terminal window/tab Claude was in
 
 Files:
-  hook script   $HOOKS_DIR/notify-stop.sh
+  stop hook     $HOOKS_DIR/notify-stop.sh
+  input hook    $HOOKS_DIR/notify-input.sh
   focus helper  $HOOKS_DIR/focus-terminal.sh
   icon          $HOOKS_DIR/claude-icon.png
-  log           $HOOKS_DIR/notify-stop.log
+  logs          $HOOKS_DIR/notify-stop.log
+                $HOOKS_DIR/notify-input.log
   settings      $SETTINGS
 
 Uninstall: ./uninstall.sh

@@ -17,7 +17,7 @@ HOOKS_DIR="$HOME/.claude/hooks"
 SETTINGS="$HOME/.claude/settings.json"
 
 if [ -f "$SETTINGS" ]; then
-  info "Removing Stop hook entry from $SETTINGS"
+  info "Removing Stop and Notification hook entries from $SETTINGS"
   TMP=$(mktemp)
   jq '
     if .hooks.Stop then
@@ -27,10 +27,18 @@ if [ -f "$SETTINGS" ]; then
       ]
       | if (.hooks.Stop | length) == 0 then del(.hooks.Stop) else . end
     else . end
+    |
+    if .hooks.Notification then
+      .hooks.Notification = [
+        .hooks.Notification[] |
+        select((.hooks // []) | any(.command? | tostring | contains("notify-input.sh")) | not)
+      ]
+      | if (.hooks.Notification | length) == 0 then del(.hooks.Notification) else . end
+    else . end
   ' "$SETTINGS" > "$TMP" && mv "$TMP" "$SETTINGS"
 fi
 
-for f in notify-stop.sh focus-terminal.sh claude-icon.png notify-stop.log; do
+for f in notify-stop.sh notify-input.sh focus-terminal.sh claude-icon.png notify-stop.log notify-input.log; do
   if [ -e "$HOOKS_DIR/$f" ]; then
     info "Removing $HOOKS_DIR/$f"
     rm -f "$HOOKS_DIR/$f"
