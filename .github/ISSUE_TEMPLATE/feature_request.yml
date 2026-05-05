@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest a new feature or enhancement.
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea? Great. Please describe the *problem* first, the *solution* second.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What current friction motivates this request?
+      placeholder: |
+        I'd like notifications to be silent when I'm actively typing in the terminal — currently every Stop event interrupts focus.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you build / how should it work?
+      placeholder: |
+        Detect frontmost-app == terminal-bundle in the hook and suppress the notification when it matches.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Anything you tried or rejected, and why.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: How wide a change is this?
+      options:
+        - "Small (a config knob, a new terminal in the lookup table)"
+        - "Medium (new hook event, new feature in an existing script)"
+        - "Large (architectural change, new dependency)"
+    validations:
+      required: true

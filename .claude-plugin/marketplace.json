@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-code-mac-notifications",
-  "description": "Native macOS notifications for Claude Code stop events.",
+  "description": "Native macOS notifications for Claude Code — Stop banners with AI-summarized bodies and Notification banners for input-required prompts.",
   "owner": {
     "name": "Pablo Ramirez",
     "url": "https://github.com/pramirez140"
@@ -9,8 +9,8 @@
   "plugins": [
     {
       "name": "claude-code-mac-notifications",
-      "description": "Native macOS notifications when Claude Code finishes a turn — with a 3-4 word AI summary, click-to-focus the originating terminal window, and the Claude logo as the icon.",
-      "version": "0.1.0",
+      "description": "Native macOS notifications for Claude Code — 3-4 word AI summary on Stop, instant 'Needs your input' alert on Notification events, click-to-focus the originating terminal window/tab.",
+      "version": "0.2.0",
       "source": "./",
       "category": "productivity",
       "homepage": "https://github.com/pramirez140/claude-code-mac-notifications"

@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate JSON & shell syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate plugin & marketplace manifests
+        run: |
+          set -e
+          for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json; do
+            echo "::group::$f"
+            jq -e . "$f"
+            echo "::endgroup::"
+          done
+
+      - name: Validate JSON in issue templates
+        run: |
+          set -e
+          for f in $(find .github -name '*.yml' -o -name '*.yaml'); do
+            python3 -c "import sys, yaml; yaml.safe_load(open('$f'))"
+          done
+
+      - name: Bash syntax check
+        run: |
+          set -e
+          for f in install.sh uninstall.sh hooks/*.sh; do
+            echo "::group::$f"
+            bash -n "$f"
+            echo "::endgroup::"
+          done
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          severity: warning
+          ignore_paths: >-
+            .claude-plugin
+            assets
+            .github
+          additional_files: >-
+            install.sh
+            uninstall.sh
+
+  installer-dryrun:
+    name: Installer dry-run on macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stub the brew install (terminal-notifier may already be present)
+        run: |
+          # Pre-create a stub so install.sh's `command -v terminal-notifier` succeeds
+          # without actually invoking brew on the runner.
+          mkdir -p "$HOME/.local/bin"
+          cat > "$HOME/.local/bin/terminal-notifier" <<'STUB'
+          #!/bin/bash
+          echo "stub terminal-notifier called: $@"
+          STUB
+          chmod +x "$HOME/.local/bin/terminal-notifier"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run install.sh against a temp HOME
+        run: |
+          set -e
+          export HOME="$RUNNER_TEMP/fake-home"
+          mkdir -p "$HOME"
+          ./install.sh
+
+      - name: Verify hook scripts and icon were copied
+        run: |
+          set -e
+          export HOME="$RUNNER_TEMP/fake-home"
+          test -x "$HOME/.claude/hooks/notify-stop.sh"
+          test -x "$HOME/.claude/hooks/notify-input.sh"
+          test -x "$HOME/.claude/hooks/focus-terminal.sh"
+          test -f "$HOME/.claude/hooks/claude-icon.png"
+          test -f "$HOME/.claude/settings.json"
+
+      - name: Verify settings.json registers both hooks
+        run: |
+          set -e
+          export HOME="$RUNNER_TEMP/fake-home"
+          jq -e '.hooks.Stop[] | .hooks[] | select(.command | contains("notify-stop.sh"))' "$HOME/.claude/settings.json"
+          jq -e '.hooks.Notification[] | .hooks[] | select(.command | contains("notify-input.sh"))' "$HOME/.claude/settings.json"
+
+      - name: Idempotence — re-run install.sh, verify no duplicate hook entries
+        run: |
+          set -e
+          export HOME="$RUNNER_TEMP/fake-home"
+          ./install.sh
+          STOP_COUNT=$(jq '[.hooks.Stop[] | .hooks[] | select(.command | contains("notify-stop.sh"))] | length' "$HOME/.claude/settings.json")
+          INPUT_COUNT=$(jq '[.hooks.Notification[] | .hooks[] | select(.command | contains("notify-input.sh"))] | length' "$HOME/.claude/settings.json")
+          if [ "$STOP_COUNT" != "1" ] || [ "$INPUT_COUNT" != "1" ]; then
+            echo "Expected exactly 1 of each hook entry, got Stop=$STOP_COUNT Notification=$INPUT_COUNT"
+            exit 1
+          fi
+          echo "Idempotence OK: 1 Stop, 1 Notification"
+
+      - name: Run uninstall.sh and verify clean removal
+        run: |
+          set -e
+          export HOME="$RUNNER_TEMP/fake-home"
+          ./uninstall.sh
+          ! test -e "$HOME/.claude/hooks/notify-stop.sh"
+          ! test -e "$HOME/.claude/hooks/notify-input.sh"
+          ! test -e "$HOME/.claude/hooks/focus-terminal.sh"
+          ! test -e "$HOME/.claude/hooks/claude-icon.png"
+          # Settings should still be valid JSON, just without our entries
+          jq -e . "$HOME/.claude/settings.json"
+          ! jq -e '.hooks.Stop // [] | length > 0' "$HOME/.claude/settings.json" || \
+            ! jq -e '.hooks.Stop[] | .hooks[]?.command? // "" | contains("notify-stop.sh")' "$HOME/.claude/settings.json"

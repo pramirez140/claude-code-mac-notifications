@@ -1,0 +1,107 @@
+name: Bug report
+description: Notification not firing, click going to the wrong window, install failure, etc.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. The more concrete the repro and logs, the faster I can fix it.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Plain-language description. What did you expect, what did you get?
+      placeholder: |
+        I expected a banner to appear after Claude finished a turn, but nothing showed up.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Smallest reproducible scenario.
+      placeholder: |
+        1. Run `claude` in a fresh Terminal window
+        2. Ask "what's 2+2?"
+        3. Wait 30 seconds — no notification appears
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Hook logs
+      description: |
+        Paste the last ~50 lines from the relevant log:
+        ```
+        tail -50 ~/.claude/hooks/notify-stop.log
+        tail -50 ~/.claude/hooks/notify-input.log
+        ```
+      render: text
+    validations:
+      required: false
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Installation method
+      options:
+        - "install.sh script"
+        - "Plugin marketplace"
+        - "Other (describe in 'What happened?')"
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      description: Run `sw_vers -productVersion`.
+      placeholder: "26.0 (Tahoe)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: terminal
+    attributes:
+      label: Terminal app
+      options:
+        - "Apple Terminal"
+        - "iTerm2"
+        - "Ghostty"
+        - "WezTerm"
+        - "VS Code integrated"
+        - "Cursor integrated"
+        - "Warp"
+        - "Hyper"
+        - "Alacritty"
+        - "Kitty"
+        - "Tabby"
+        - "Other (describe in 'What happened?')"
+    validations:
+      required: true
+
+  - type: input
+    id: claude-version
+    attributes:
+      label: Claude Code version
+      description: Run `claude --version`.
+      placeholder: "2.1.128"
+    validations:
+      required: true
+
+  - type: textarea
+    id: settings-snippet
+    attributes:
+      label: Relevant settings
+      description: |
+        Paste the `Stop` and `Notification` blocks from `~/.claude/settings.json`:
+        ```
+        jq '.hooks.Stop, .hooks.Notification' ~/.claude/settings.json
+        ```
+      render: json
+    validations:
+      required: false

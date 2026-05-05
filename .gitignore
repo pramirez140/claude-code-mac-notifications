@@ -1,6 +1,21 @@
+# Logs
 *.log
+
+# macOS
 .DS_Store
+._*
+.AppleDouble
+.LSOverride
+
+# IDEs / editors
 .idea/
 .vscode/
-node_modules/
+*.swp
+*.swo
+*~
+
+# Local artifacts
 *.tmp
+*.bak
+.cache/
+node_modules/
